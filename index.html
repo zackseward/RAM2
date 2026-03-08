@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAM — Random Article Machine</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background-color: #0c0c0c;
+      color: #ede8df;
+      font-family: 'Georgia', 'Times New Roman', serif;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 32px; height: 60px;
+      background: #0c0c0c;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .brand {
+      background: none; border: none; cursor: pointer;
+      display: flex; align-items: baseline; gap: 10px; padding: 0;
+    }
+    .brand-ram  { font-size: 22px; font-weight: bold; letter-spacing: 6px; color: #ede8df; font-family: inherit; }
+    .brand-full { font-size: 12px; color: #555; letter-spacing: 1.5px; text-transform: uppercase; font-family: inherit; }
+    .nav-right  { display: flex; gap: 12px; }
+    .ghost-btn  {
+      background: none; border: 1px solid #2e2e2e; color: #888;
+      padding: 6px 16px; border-radius: 4px; cursor: pointer;
+      font-size: 13px; letter-spacing: 0.5px; font-family: 'Georgia', serif;
+    }
+    .ghost-btn:hover { border-color: #555; color: #bbb; }
+
+    /* ── Page ── */
+    .page {
+      max-width: 720px; width: 100%; margin: 0 auto;
+      padding: 56px 24px 80px;
+      display: flex; flex-direction: column; align-items: center; gap: 28px;
+    }
+
+    /* ── Hero ── */
+    .hero { text-align: center; max-width: 560px; }
+    .eyebrow    { color: #444; font-size: 14px; letter-spacing: 4px; margin-bottom: 20px; }
+    .hero-title { font-size: clamp(26px, 5vw, 50px); line-height: 1.22; font-weight: normal; margin-bottom: 18px; }
+    .hero-sub   { color: #777; font-size: 17px; font-style: italic; line-height: 1.6; }
+
+    /* ── Topic Pills ── */
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; }
+    .pill  {
+      background: none; border: 1px solid #2a2a2a; color: #888;
+      padding: 5px 14px; border-radius: 20px; cursor: pointer;
+      font-size: 13px; letter-spacing: 0.5px; font-family: 'Georgia', serif;
+      transition: all 0.18s ease;
+    }
+    .pill:hover { border-color: #555; color: #bbb; }
+
+    /* ── Hit Button ── */
+    .hit-btn {
+      background-color: #dc2626; color: #fff; border: none;
+      padding: 16px 52px; font-size: 19px; border-radius: 4px;
+      cursor: pointer; font-family: 'Georgia', serif; letter-spacing: 0.5px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .hit-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .hit-btn:disabled { opacity: 0.55; cursor: wait; }
+
+    .error-msg { color: #dc2626; font-size: 14px; }
+
+    /* ── Card ── */
+    .card {
+      width: 100%; background: #141414;
+      border: 1px solid #1e1e1e; border-radius: 8px; overflow: hidden;
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+    .card-bar   { height: 4px; width: 100%; }
+    .card-img   { width: 100%; max-height: 380px; object-fit: cover; display: block; }
+    .card-body  { padding: 24px 28px 28px; }
+    .card-meta  { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .topic-pill {
+      color: #fff; font-size: 10px; font-weight: bold; letter-spacing: 1.5px;
+      text-transform: uppercase; padding: 3px 9px; border-radius: 3px;
+      font-family: sans-serif; display: inline-block;
+    }
+    .card-source { font-size: 13px; color: #777; font-style: italic; }
+    .card-date   { font-size: 13px; color: #555; margin-left: auto; }
+    .card-title  { font-size: clamp(20px, 3vw, 28px); line-height: 1.32; font-weight: normal; margin-bottom: 14px; }
+    .card-desc   { color: #999; font-size: 15px; line-height: 1.75; margin-bottom: 22px; }
+    .read-link   {
+      font-size: 14px; text-decoration: none;
+      border-bottom: 1px solid; padding-bottom: 2px; letter-spacing: 0.3px;
+    }
+    .read-link:hover { opacity: 0.75; }
+
+    /* ── Kicker ── */
+    .kicker { color: #333; font-size: 12px; letter-spacing: 2px; text-align: center; margin-top: 12px; }
+
+    /* ── History ── */
+    .hist-head { font-size: 22px; font-weight: normal; letter-spacing: 2px; align-self: flex-start; margin-bottom: 8px; }
+    .hist-list { width: 100%; display: flex; flex-direction: column; }
+    .hist-item {
+      display: flex; flex-direction: column; gap: 5px;
+      padding: 16px 0; border-bottom: 1px solid #1a1a1a;
+      text-decoration: none; color: inherit; cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .hist-item:hover { opacity: 0.75; }
+    .hist-title { font-size: 16px; color: #ede8df; line-height: 1.4; }
+    .hist-meta  { font-size: 12px; color: #555; font-style: italic; }
+
+    @media (max-width: 600px) {
+      .nav { padding: 0 16px; }
+      .brand-full { display: none; }
+      .page { padding: 36px 16px 60px; gap: 22px; }
+      .hit-btn { padding: 14px 36px; font-size: 17px; }
+      .card-body { padding: 18px 18px 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useCallback } = React;
+
+    // ── Feed Catalogue ──────────────────────────────────────────────────────
+    const FEEDS = {
+      World: [
+        "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "https://feeds.npr.org/1004/rss.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+        "https://www.theguardian.com/world/rss",
+      ],
+      Technology: [
+        "https://www.wired.com/feed/rss",
+        "https://feeds.arstechnica.com/arstechnica/index",
+        "https://www.theverge.com/rss/index.xml",
+        "https://feeds.feedburner.com/TechCrunch",
+      ],
+      Science: [
+        "https://rss.nytimes.com/services/xml/rss/nyt/Science.xml",
+        "https://www.scientificamerican.com/platform/themis/rss/feed/",
+        "https://feeds.npr.org/1007/rss.xml",
+      ],
+      Arts: [
+        "https://www.newyorker.com/feed/posts",
+        "https://www.theatlantic.com/feed/all/",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Arts.xml",
+      ],
+      Business: [
+        "https://feeds.npr.org/1006/rss.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+        "https://feeds.bbci.co.uk/news/business/rss.xml",
+      ],
+      US: [
+        "https://feeds.npr.org/1003/rss.xml",
+        "https://rss.nytimes.com/services/xml/rss/nyt/US.xml",
+        "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml",
+      ],
+    };
+
+    const PROXY = "https://api.rss2json.com/v1/api.json?count=40&rss_url=";
+
+    const TOPIC_COLORS = {
+      World:      "#2563eb",
+      Technology: "#7c3aed",
+      Science:    "#059669",
+      Arts:       "#d97706",
+      Business:   "#dc2626",
+      US:         "#0891b2",
+    };
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+    function stripHtml(str = "") {
+      return str.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').trim();
+    }
+
+    function excerpt(str = "", len = 220) {
+      const clean = stripHtml(str);
+      return clean.length > len ? clean.slice(0, len).replace(/\s+\S*$/, "") + "…" : clean;
+    }
+
+    function formatDate(str) {
+      if (!str) return null;
+      try {
+        return new Date(str).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+      } catch { return null; }
+    }
+
+    function pickRandom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // ── Main Component ───────────────────────────────────────────────────────
+    function RAM() {
+      const [article, setArticle] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [error,   setError]   = useState(null);
+      const [topic,   setTopic]   = useState("All");
+      const [history, setHistory] = useState([]);
+      const [view,    setView]    = useState("main");
+      const [visible, setVisible] = useState(false);
+
+      const fetchArticle = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        setVisible(false);
+
+        const topics      = topic === "All" ? Object.keys(FEEDS) : [topic];
+        const chosenTopic = pickRandom(topics);
+        const feed        = pickRandom(FEEDS[chosenTopic]);
+
+        try {
+          const res  = await fetch(`${PROXY}${encodeURIComponent(feed)}`);
+          const data = await res.json();
+
+          if (data.status !== "ok" || !data.items?.length) throw new Error("bad feed");
+
+          const items = data.items.filter(i => i.title && i.link);
+          if (!items.length) throw new Error("no items");
+
+          const item  = pickRandom(items);
+          const thumb = item.thumbnail || item.enclosure?.link || null;
+
+          const next = {
+            title:  item.title,
+            desc:   excerpt(item.description || item.content || ""),
+            link:   item.link,
+            source: data.feed?.title || new URL(feed).hostname.replace("www.", ""),
+            date:   formatDate(item.pubDate),
+            image:  thumb && thumb.startsWith("http") ? thumb : null,
+            topic:  chosenTopic,
+            id:     Date.now(),
+          };
+
+          setArticle(next);
+          setHistory(h => [next, ...h.filter(x => x.link !== next.link)].slice(0, 20));
+          setTimeout(() => setVisible(true), 60);
+
+        } catch {
+          setError("Couldn't load an article — try again!");
+        } finally {
+          setLoading(false);
+        }
+      }, [topic]);
+
+      const accent = article ? TOPIC_COLORS[article.topic] : "#dc2626";
+
+      return (
+        <>
+          {/* ── Nav ── */}
+          <nav className="nav">
+            <button className="brand" onClick={() => { setView("main"); setArticle(null); }}>
+              <span className="brand-ram">RAM</span>
+              <span className="brand-full">Random Article Machine</span>
+            </button>
+            <div className="nav-right">
+              {view === "main"    && history.length > 0 &&
+                <button className="ghost-btn" onClick={() => setView("history")}>History ({history.length})</button>}
+              {view === "history" &&
+                <button className="ghost-btn" onClick={() => setView("main")}>← Back</button>}
+            </div>
+          </nav>
+
+          {/* ── History View ── */}
+          {view === "history" && (
+            <div className="page">
+              <h2 className="hist-head">Your reading history</h2>
+              <div className="hist-list">
+                {history.map(h => (
+                  <a key={h.id} href={h.link} target="_blank" rel="noopener noreferrer" className="hist-item">
+                    <span className="topic-pill" style={{ backgroundColor: TOPIC_COLORS[h.topic] }}>{h.topic}</span>
+                    <span className="hist-title">{h.title}</span>
+                    <span className="hist-meta">{h.source}{h.date ? ` · ${h.date}` : ""}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Main View ── */}
+          {view === "main" && (
+            <div className="page">
+
+              {!article && !loading && (
+                <div className="hero">
+                  <p className="eyebrow">~ ~ ~</p>
+                  <h1 className="hero-title">Add some serendipity<br />to your media diet.</h1>
+                  <p className="hero-sub">Because the best stories are the ones you aren't looking for.</p>
+                </div>
+              )}
+
+              <div className="pills">
+                {["All", ...Object.keys(FEEDS)].map(t => (
+                  <button
+                    key={t}
+                    className="pill"
+                    onClick={() => setTopic(t)}
+                    style={topic === t
+                      ? { backgroundColor: t === "All" ? "#dc2626" : TOPIC_COLORS[t], color: "#fff", borderColor: "transparent" }
+                      : {}}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <button className="hit-btn" onClick={fetchArticle} disabled={loading}>
+                {loading ? "Finding something good…" : article ? "Hit me again ↓" : "Hit me ↓"}
+              </button>
+
+              {error && <p className="error-msg">{error}</p>}
+
+              {article && (
+                <div
+                  className="card"
+                  style={{
+                    opacity:   visible ? 1 : 0,
+                    transform: visible ? "translateY(0)" : "translateY(24px)",
+                  }}
+                >
+                  <div className="card-bar" style={{ backgroundColor: accent }} />
+
+                  {article.image && (
+                    <img
+                      src={article.image}
+                      alt=""
+                      className="card-img"
+                      onError={e => { e.target.style.display = "none"; }}
+                    />
+                  )}
+
+                  <div className="card-body">
+                    <div className="card-meta">
+                      <span className="topic-pill" style={{ backgroundColor: accent }}>{article.topic}</span>
+                      <span className="card-source">{article.source}</span>
+                      {article.date && <span className="card-date">{article.date}</span>}
+                    </div>
+                    <h2 className="card-title">{article.title}</h2>
+                    {article.desc && <p className="card-desc">{article.desc}</p>}
+                    <a
+                      href={article.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="read-link"
+                      style={{ color: accent, borderBottomColor: accent }}
+                    >
+                      Read the full story →
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              <p className="kicker">~~~Add some serendipity to your media diet~~~</p>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    // ── Mount ────────────────────────────────────────────────────────────────
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<RAM />);
+  </script>
+</body>
+</html>
